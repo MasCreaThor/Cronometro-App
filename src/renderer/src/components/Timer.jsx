@@ -1,8 +1,9 @@
-// src/renderer/src/components/Timer.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useState } from 'react';
 import Display from '@renderer/components/Display';
 import Controls from '@renderer/components/Controls';
 import History from '@renderer/components/History';
+import Countdown from '@renderer/components/Countdown';
 import Alarma from '@renderer/assets/alarma.mp3';
 
 function Timer() {
@@ -10,145 +11,128 @@ function Timer() {
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
   const [alarma] = useState(new Audio(Alarma));
-  const [timeRecords, setTimeRecords] = useState([]);
-  const [error, setError] = useState('');
+  const [history, setHistory] = useState(() => {
+    // Initialize history from localStorage if available
+    const savedHistory = localStorage.getItem('timerHistory');
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
+
+  // Store the initial timer values when starting
+  const [initialTimerValues, setInitialTimerValues] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  // Track if timer was started with non-zero values
+  const [validTimerStarted, setValidTimerStarted] = useState(false);
 
   const reset = () => {
     setHours(0);
     setMinutes(0);
     setSeconds(0);
-    setIsRunning(false);
-    setError('');
-    setInitialTime(null);
-    setCurrentTimerId(null);
   };
 
-  const validateTime = () => {
-    // Verificar si se ha establecido algún tiempo
-    if (hours === 0 && minutes === 0 && seconds === 0) {
-      setError('Por favor, establece un tiempo antes de iniciar');
-      return false;
-    }
-    setError('');
-    return true;
-  };
+  // Función para iniciar la cuenta regresiva antes del temporizador
+  const startCountdown = () => {
+    // Solo iniciar si hay un tiempo válido configurado
+    if (hours > 0 || minutes > 0 || seconds > 0) {
+      // Guardar los valores iniciales de tiempo
+      const exactInitialValues = { hours, minutes, seconds };
+      setInitialTimerValues(exactInitialValues);
+      setValidTimerStarted(true);
 
-  const handleStartStop = () => {
-    if (!isRunning) {
-      // Solo validamos cuando estamos por iniciar
-      if (!validateTime()) return;
+      // Mostrar la cuenta regresiva
+      setShowCountdown(true);
 
-      // Generamos un nuevo ID para este ciclo de temporización
-      const newTimerId = Date.now();
-      setCurrentTimerId(newTimerId);
-
-      // Si iniciamos, guardamos el tiempo inicial para el historial
-      const initialTime = {
-        hours,
-        minutes,
-        seconds
-      };
-      // Guardamos en el estado para usarlo cuando finalice
-      setInitialTime(initialTime);
+      console.log("Countdown started. Timer values:", exactInitialValues);
     } else {
-      // Si paramos manualmente, guardamos en el historial con el tiempo restante
-      addToHistory({
-        hours,
-        minutes,
-        seconds,
-        completed: false
-      });
-
-      // Limpiamos ambos valores para evitar duplicados
-      setInitialTime(null);
-      setCurrentTimerId(null);
+      console.log("Timer not started: All values are zero");
+      setValidTimerStarted(false);
     }
-
-    // Cambiamos el estado de ejecución
-    setIsRunning(prev => !prev);
   };
 
-  // Estado para guardar el tiempo inicial y un ID para cada ciclo de temporización
-  const [initialTime, setInitialTime] = useState(null);
-  const [currentTimerId, setCurrentTimerId] = useState(null);
+  // Esta función se llamará cuando termine la cuenta regresiva
+  const onCountdownComplete = () => {
+    setShowCountdown(false);
+    // Iniciar el temporizador real
+    setIsRunning(true);
+    console.log("Countdown complete, timer started");
+  };
 
-  const addToHistory = (currentTime) => {
-    const now = new Date();
-    const formattedDate = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+  // Delete a specific history item
+  const deleteHistoryItem = (index) => {
+    const updatedHistory = [...history];
+    updatedHistory.splice(index, 1);
+    setHistory(updatedHistory);
+    localStorage.setItem('timerHistory', JSON.stringify(updatedHistory));
+  };
 
-    let timeEntry = {
-      ...currentTime,
-      date: formattedDate,
-      id: currentTimerId || Date.now() // Usar ID existente o crear uno nuevo
-    };
-
-    // Verificar que no exista un registro con el mismo ID
-    setTimeRecords(prev => {
-      // Si ya existe un registro con este ID, no agregarlo de nuevo
-      if (currentTimerId && prev.some(record => record.id === currentTimerId)) {
-        return prev;
-      }
-      return [timeEntry, ...prev];
-    });
+  // Delete all history
+  const deleteAllHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('timerHistory');
   };
 
   useEffect(() => {
-    if (!isRunning) return;
-
     const intervalId = setInterval(() => {
-      setSeconds((prev) => {
-        if (prev > 0) return prev - 1;
-        if (minutes > 0) {
-          setMinutes((m) => m - 1);
-          return 59;
+      setIsRunning((prev) => {
+        if (!prev) {
+          clearInterval(intervalId);
+          return false;
         }
-        if (hours > 0) {
-          setHours((h) => h - 1);
-          setMinutes(59);
-          return 59;
-        }
-
-        // Temporizador completado
-        alarma.play();
-        setIsRunning(false);
-
-        // Agregar al historial cuando finaliza, solo si hay un tiempo inicial
-        if (initialTime) {
-          addToHistory({
-            ...initialTime,
-            completed: true
-          });
-          // Limpiar para evitar duplicados
-          setInitialTime(null);
-          setCurrentTimerId(null);
-        }
-
-        clearInterval(intervalId);
-        return 0;
+        return true;
       });
+
+      if (isRunning) {
+        setSeconds(prev => prev - 1);
+      }
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isRunning, minutes, hours, alarma, initialTime]);
+  }, [isRunning]);
 
-  // Nuevo componente para mostrar errores
-  const ErrorMessage = () => {
-    if (!error) return null;
-    return <div className="error-message">{error}</div>;
-  };
-
-  // Función para actualizar tamaño de la ventana según si hay historial
   useEffect(() => {
-    const { ipcRenderer } = window.electron;
-    const newHeight = timeRecords.length > 0 ? 500 : 320;
-    ipcRenderer.send('resize', 400, newHeight);
-  }, [timeRecords.length]);
+    if (!isRunning) {
+      return;
+    }
+    if (seconds === 0 && minutes === 0 && hours === 0) {
+      // Timer ended - only add to history if it was a valid timer (started with non-zero values)
+      if (validTimerStarted) {
+        const timerCompleteHistoryItem = {
+          hours: initialTimerValues.hours,
+          minutes: initialTimerValues.minutes,
+          seconds: initialTimerValues.seconds,
+          timestamp: Date.now(),
+          completed: true
+        };
 
+        // Add new item at the BEGINNING of the array (stack order - newest first)
+        const updatedHistory = [timerCompleteHistoryItem, ...history];
+        setHistory(updatedHistory);
+        localStorage.setItem('timerHistory', JSON.stringify(updatedHistory));
+      }
 
+      alarma.play();
+      setIsRunning(false);
+      return;
+    }
+    if (seconds < 0 && minutes > 0) {
+      setMinutes(prev => prev - 1);
+      setSeconds(59);
+    }
+    if (seconds < 0 && minutes === 0 && hours > 0) {
+      setHours(prev => prev - 1);
+      setMinutes(59);
+      setSeconds(59);
+    }
+  }, [seconds, minutes, hours, isRunning, alarma, history, initialTimerValues, validTimerStarted]);
 
   return (
-    <div className="timer-container">
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Componente de cuenta regresiva */}
+      <Countdown
+        isActive={showCountdown}
+        onComplete={onCountdownComplete}
+      />
+
       <Display
         setHours={setHours}
         setMinutes={setMinutes}
@@ -158,13 +142,25 @@ function Timer() {
         seconds={seconds}
         isRunning={isRunning}
       />
-      <ErrorMessage />
       <Controls
-        setIsRunning={handleStartStop}
-        isRunning={isRunning}
+        setIsRunning={(value) => {
+          // Si está ejecutándose, solo detener
+          if (isRunning && !value) {
+            setIsRunning(false);
+          }
+          // Si no está ejecutándose y queremos iniciar, primero mostrar la cuenta regresiva
+          else if (!isRunning && value) {
+            startCountdown();
+          }
+        }}
+        isRunning={isRunning || showCountdown} // Para deshabilitar el botón durante la cuenta regresiva
         reset={reset}
       />
-      <History timeRecords={timeRecords} />
+      <History
+        history={history}
+        deleteHistoryItem={deleteHistoryItem}
+        deleteAllHistory={deleteAllHistory}
+      />
     </div>
   );
 }
