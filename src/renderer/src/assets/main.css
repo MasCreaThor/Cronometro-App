@@ -1,0 +1,52 @@
+html, body, #root {
+  height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: black;
+  color: white;
+}
+
+input {
+  width: 22vw;
+  border: none;
+  background-color: transparent;
+  color: white;
+  font-size: 16vw;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  text-align: center;
+}
+
+button {
+  width: 16vw;
+  height: 16vw;
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4.6vw;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+span {
+  font-size: 8vw;
+}
+
+#divControls {
+  display: flex;
+  justify-content: space-between;
+  width: 70vw;
+}
+
+#divDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4vh;
+}
