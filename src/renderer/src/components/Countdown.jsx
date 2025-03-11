@@ -1,3 +1,4 @@
+// src/renderer/src/components/Countdown.jsx
 import React, { useState, useEffect } from 'react';
 
 function Countdown({ onComplete, isActive }) {
@@ -42,7 +43,7 @@ function Countdown({ onComplete, isActive }) {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      zIndex: 100,
+      zIndex: 1000, // Asegurarnos que esté por encima de todo
       flexDirection: 'column'
     }}>
       <div style={{

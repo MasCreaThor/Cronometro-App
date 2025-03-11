@@ -78,21 +78,21 @@ function Timer() {
   };
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      setIsRunning((prev) => {
-        if (!prev) {
-          clearInterval(intervalId);
-          return false;
-        }
-        return true;
-      });
+    let intervalId;
 
-      if (isRunning) {
+    // Solo crear el intervalo si isRunning es true
+    if (isRunning) {
+      intervalId = setInterval(() => {
         setSeconds(prev => prev - 1);
-      }
-    }, 1000);
+      }, 1000);
+    }
 
-    return () => clearInterval(intervalId);
+    // Limpiar el intervalo cuando cambie isRunning o se desmonte el componente
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, [isRunning]);
 
   useEffect(() => {
@@ -144,44 +144,78 @@ function Timer() {
   }, []);
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{
+      width: '100%',
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      padding: '20px 0',
+      boxSizing: 'border-box',
+      overflow: 'hidden'
+    }}>
+      {/* Componente de cuenta regresiva - posición absoluta para no afectar el layout */}
       <Countdown
         isActive={showCountdown}
         onComplete={onCountdownComplete}
       />
 
-      <Display
-        setHours={setHours}
-        setMinutes={setMinutes}
-        setSeconds={setSeconds}
-        hours={hours}
-        minutes={minutes}
-        seconds={seconds}
-        isRunning={isRunning}
-      />
+      {/* Contenedor principal para los controles del timer */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: '400px',
+        flex: '0 0 auto',
+        marginBottom: '20px'
+      }}>
+        <Display
+          setHours={setHours}
+          setMinutes={setMinutes}
+          setSeconds={setSeconds}
+          hours={hours}
+          minutes={minutes}
+          seconds={seconds}
+          isRunning={isRunning}
+        />
 
-      <Controls
-        setIsRunning={(value) => {
-          if (isRunning && !value) {
-            setIsRunning(false);
-          } else if (!isRunning && value) {
-            startCountdown();
-          }
-        }}
-        isRunning={isRunning || showCountdown}
-        reset={reset}
-      />
+        <Controls
+          setIsRunning={() => {
+            if (isRunning) {
+              setIsRunning(false);
+            }
+            else {
+              startCountdown();
+            }
+          }}
+          isRunning={isRunning || showCountdown}
+          reset={reset}
+        />
 
-      <SoundSelector
-        currentSound={selectedSound}
-        onSoundChange={handleSoundChange}
-      />
+        <SoundSelector
+          currentSound={selectedSound}
+          onSoundChange={handleSoundChange}
+        />
+      </div>
 
-      <History
-        history={history}
-        deleteHistoryItem={deleteHistoryItem}
-        deleteAllHistory={deleteAllHistory}
-      />
+      {/* Contenedor del historial con tamaño fijo */}
+      <div style={{
+        width: '100%',
+        maxWidth: '400px',
+        flex: '1 1 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        overflow: 'hidden'
+      }}>
+        <History
+          history={history}
+          deleteHistoryItem={deleteHistoryItem}
+          deleteAllHistory={deleteAllHistory}
+        />
+      </div>
     </div>
   );
 }
