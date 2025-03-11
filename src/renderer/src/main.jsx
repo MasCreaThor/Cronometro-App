@@ -1,3 +1,4 @@
+// src/renderer/src/main.jsx
 import './assets/main.css';
 
 import React from 'react';
